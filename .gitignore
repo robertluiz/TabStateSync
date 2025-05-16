@@ -11,3 +11,6 @@ dist/
 *.sw?
 .cursor/
 TASKS.md
+playwright-report/*
+test-results/*
+.last-run.json

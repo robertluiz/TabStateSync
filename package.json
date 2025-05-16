@@ -1,0 +1,29 @@
+{
+  "name": "tabstatesync",
+  "version": "0.1.0",
+  "description": "Lightweight library for synchronizing state across browser tabs using BroadcastChannel or localStorage fallback.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests yet\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seu-usuario/TabStateSync.git"
+  },
+  "keywords": [
+    "state",
+    "sync",
+    "browser",
+    "tabs",
+    "typescript",
+    "react"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": "^19.1.4",
+    "react": "^19.1.0"
+  }
+}

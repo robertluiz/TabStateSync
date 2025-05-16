@@ -13,6 +13,7 @@ TabStateSync is a lightweight JavaScript/TypeScript library for synchronizing st
 - [x] Prevent duplicate events from own tab
 - [x] Support multiple keys/channels
 - [x] Create custom React hook: useTabStateSync(key, initialValue)
+- [x] Add usage examples (React and Vanilla JS)
 
 ## In Progress Tasks
 

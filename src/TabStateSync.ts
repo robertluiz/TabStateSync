@@ -7,6 +7,7 @@ export class TabStateSync<T = any> {
   private lastValue: T | undefined;
   private isBroadcastChannel: boolean;
   private isSetting: boolean = false;
+  private destroyed = false;
 
   constructor(key: string) {
     this.key = key;
@@ -31,6 +32,7 @@ export class TabStateSync<T = any> {
   }
 
   set(value: T): void {
+    if (this.destroyed) return;
     this.lastValue = value;
     this.isSetting = true;
     if (this.isBroadcastChannel && this.channel) {
@@ -63,5 +65,6 @@ export class TabStateSync<T = any> {
       window.removeEventListener('storage', this.onStorage);
     }
     this.callbacks.clear();
+    this.destroyed = true;
   }
 } 

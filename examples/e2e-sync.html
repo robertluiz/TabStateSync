@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TabStateSync E2E Test</title>
+  <script type="module">
+    import { createTabStateSync } from './tabstatesync.bundle.js';
+    window.tabSync = createTabStateSync('e2e');
+  </script>
+</head>
+<body>
+  <input id="value" type="text" placeholder="Type to sync" />
+  <button id="set">Set</button>
+  <div id="synced"></div>
+  <script type="module">
+    const input = document.getElementById('value');
+    const btn = document.getElementById('set');
+    const synced = document.getElementById('synced');
+    btn.onclick = () => {
+      window.tabSync.set(input.value);
+    };
+    window.tabSync.subscribe((v) => {
+      synced.textContent = v;
+    });
+  </script>
+</body>
+</html> 

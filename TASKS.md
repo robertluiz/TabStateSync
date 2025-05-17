@@ -14,14 +14,19 @@ TabStateSync is a lightweight JavaScript/TypeScript library for synchronizing st
 - [x] Support multiple keys/channels
 - [x] Create custom React hook: useTabStateSync(key, initialValue)
 - [x] Add usage examples (React and Vanilla JS)
+- [x] Implement unit tests (Jest or Vitest)
+- [x] Document API (JSDoc and README)
+- [x] Add "How to use" section with examples
+- [x] Write FAQ/known limitations
+- [x] Test support in different browsers (Chrome, Firefox, Edge, Safari) via Playwright E2E
 
 ## In Progress Tasks
 
-- [ ] Ensure automatic updates in all React components
-- [ ] Test React integration
-- [ ] Implement unit tests (Jest or Vitest)
-- [ ] Test support in different browsers (Chrome, Firefox, Edge, Safari)
 - [ ] Ensure fallback works (localStorage)
+  - [ ] Temporarily disable BroadcastChannel e rodar o teste E2E Playwright para garantir fallback
+- [ ] Documentar no README o fluxo de testes E2E cross-browser e como rodar
+- [ ] Adicionar scripts npm para build, serve e2e e test:e2e
+- [ ] (Opcional) Adicionar integração contínua (CI) para rodar testes E2E
 - [ ] Add usage examples (React and Vanilla JS)
 - [ ] Document API (JSDoc and README)
 - [ ] Add "How to use" section with examples

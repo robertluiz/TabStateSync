@@ -142,11 +142,11 @@ This project uses [standard-version](https://github.com/conventional-changelog/s
 - **Does it require a backend or cookies?**
   - No. It is 100% client-side and does not use cookies or any backend.
 - **What happens if BroadcastChannel is not available?**
-  - It automatically falls back to using localStorage events for maximum compatibility.
+  - It automatically falls back to using localStorage events for maximum compatibility. On Safari, due to browser limitations, the library uses a polling mechanism to detect changes, since the storage event is not reliably fired between tabs.
 - **Is it suitable for real-time multi-user collaboration?**
   - No. It is designed for client-side, same-user scenarios (e.g., SPAs, PWAs, admin panels).
 - **Does it work in incognito/private mode?**
-  - Yes, as long as the browser supports BroadcastChannel or localStorage events in that mode.
+  - Yes, as long as the browser supports BroadcastChannel or localStorage events in that mode. On Safari, the fallback uses polling to ensure sync even when the storage event does not fire.
 - **What about memory leaks?**
   - Always call `destroy()` when you no longer need a TabStateSync instance (e.g., on component unmount).
 
@@ -166,3 +166,10 @@ MIT
 ---
 
 Contributions and suggestions are welcome!
+
+---
+
+## Safari/Apple limitations
+
+**Safari (desktop and iOS) does not reliably fire the `storage` event between tabs.**
+To ensure cross-tab sync, TabStateSync automatically enables a polling fallback only on Safari, checking for changes every 500ms. This ensures maximum compatibility, but may have a slight performance impact only on Safari. All other browsers use the more efficient `storage` event.

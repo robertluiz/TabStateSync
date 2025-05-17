@@ -983,11 +983,13 @@ var TabStateSync = class {
     this.callbacks = /* @__PURE__ */ new Set();
     this.isSetting = false;
     this.destroyed = false;
+    this.pollingInterval = null;
+    this.lastPolledValue = null;
     this.onStorage = (e) => {
       if (e.key !== this.key || !e.newValue) return;
       try {
         const { value } = JSON.parse(e.newValue);
-        if (this.isSetting) return;
+        localStorage.removeItem(this.key);
         this.notify(value);
       } catch {
       }
@@ -1000,9 +1002,28 @@ var TabStateSync = class {
         if (this.isSetting) return;
         this.notify(event.data);
       };
+    } else if (this.isSafari()) {
+      this.lastPolledValue = localStorage.getItem(this.key);
+      this.pollingInterval = window.setInterval(() => {
+        const current = localStorage.getItem(this.key);
+        if (current !== this.lastPolledValue) {
+          this.lastPolledValue = current;
+          if (current) {
+            try {
+              const { value } = JSON.parse(current);
+              localStorage.removeItem(this.key);
+              this.notify(value);
+            } catch {
+            }
+          }
+        }
+      }, 500);
     } else {
       window.addEventListener("storage", this.onStorage);
     }
+  }
+  isSafari() {
+    return typeof navigator !== "undefined" && /safari/i.test(navigator.userAgent) && !/chrome|android/i.test(navigator.userAgent);
   }
   subscribe(callback) {
     this.callbacks.add(callback);
@@ -1018,6 +1039,9 @@ var TabStateSync = class {
       this.channel.postMessage(value);
     } else {
       localStorage.setItem(this.key, JSON.stringify({ value, ts: Date.now() }));
+      if (this.isSafari()) {
+        this.lastPolledValue = localStorage.getItem(this.key);
+      }
     }
     this.notify(value);
     setTimeout(() => {
@@ -1031,6 +1055,9 @@ var TabStateSync = class {
   destroy() {
     if (this.isBroadcastChannel && this.channel) {
       this.channel.close();
+    } else if (this.isSafari() && this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
     } else {
       window.removeEventListener("storage", this.onStorage);
     }
@@ -1043,7 +1070,7 @@ var TabStateSync = class {
 var import_react = __toESM(require_react());
 function useTabStateSync(key, initialValue) {
   const [state, setState] = (0, import_react.useState)(initialValue);
-  const syncRef = (0, import_react.useRef)();
+  const syncRef = (0, import_react.useRef)(null);
   (0, import_react.useEffect)(() => {
     syncRef.current = new TabStateSync(key);
     const handleChange = (value) => setState(value);

@@ -3,7 +3,7 @@ import { TabStateSync } from './TabStateSync';
 
 export function useTabStateSync<T = any>(key: string, initialValue: T): [T, (v: T) => void] {
   const [state, setState] = useState<T>(initialValue);
-  const syncRef = useRef<TabStateSync<T>>();
+  const syncRef = useRef<TabStateSync<T> | null>(null);
 
   useEffect(() => {
     syncRef.current = new TabStateSync<T>(key);

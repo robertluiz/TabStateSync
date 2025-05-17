@@ -23,10 +23,10 @@ test.describe('TabStateSync cross-tab sync', () => {
   });
 
   test('should sync value between two tabs (localStorage fallback)', async ({ page, context }) => {
-    await page.addInitScript(() => { window.BroadcastChannel = undefined; });
+    await page.addInitScript('delete window.BroadcastChannel');
     await page.goto('/examples/e2e-sync.html');
     const page2 = await context.newPage();
-    await page2.addInitScript(() => { window.BroadcastChannel = undefined; });
+    await page2.addInitScript('delete window.BroadcastChannel');
     await page2.goto('/examples/e2e-sync.html');
 
     await page.getByPlaceholder('Type to sync').fill('baz');

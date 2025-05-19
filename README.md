@@ -1,7 +1,6 @@
 # 🧩 TabStateSync
 
 [![npm version](https://img.shields.io/npm/v/tabstatesync.svg)](https://www.npmjs.com/package/tabstatesync)
-![CI](https://github.com/robertluiz/TabStateSync/actions/workflows/ci.yml/badge.svg)
 ![Tests](https://github.com/robertluiz/TabStateSync/actions/workflows/ci.yml/badge.svg?label=tests)
 
 **TabStateSync** is a lightweight TypeScript library for synchronizing state across multiple browser tabs.
@@ -30,7 +29,7 @@ npm install tabstatesync
 
 ### Basic Example (Vanilla JS/TS)
 
-Veja também exemplos completos em [`examples/VanillaThemeExample.ts`](examples/VanillaThemeExample.ts) e [`examples/e2e-sync.html`](examples/e2e-sync.html).
+See also complete examples in [`examples/VanillaThemeExample.ts`](examples/VanillaThemeExample.ts) and [`examples/e2e-sync.html`](examples/e2e-sync.html).
 
 ```ts
 import { createTabStateSync } from 'tabstatesync';
@@ -51,7 +50,7 @@ tabSync.set('dark');
 
 ### React Hook Example
 
-Veja também exemplo completo em [`examples/ReactThemeExample.tsx`](examples/ReactThemeExample.tsx).
+See also complete example in [`examples/ReactThemeExample.tsx`](examples/ReactThemeExample.tsx).
 
 ```tsx
 import { useTabStateSync } from 'tabstatesync';
@@ -80,14 +79,14 @@ function ThemeSwitcher() {
 
 ## 📝 API Reference
 
-### `createTabStateSync(key: string): TabStateSync`
-Creates a new sync channel for a given key.
+### `createTabStateSync(key: string, options?: TabStateSyncOptions): TabStateSync`
+Creates a new sync channel for a given key with optional configuration.
 
 ### `TabStateSync<T>`
 Class for synchronizing state across tabs.
 
 #### Constructor
-- `new TabStateSync<T>(key: string)`
+- `new TabStateSync<T>(key: string, options?: TabStateSyncOptions)`
 
 #### Methods
 - `subscribe(callback: (value: T) => void): void` — Registers a callback for value changes from other tabs.
@@ -95,8 +94,76 @@ Class for synchronizing state across tabs.
 - `set(value: T): void` — Updates the value and notifies other tabs.
 - `destroy(): void` — Cleans up listeners and disables the instance.
 
-### `useTabStateSync(key: string, initialValue: any): [any, (v: any) => void]` *(React only)*
+### `TabStateSyncOptions`
+Configuration options for `TabStateSync`.
+
+```ts
+interface TabStateSyncOptions {
+  // Namespace prefix for localStorage keys to prevent collisions
+  namespace?: string; // default: 'tss'
+  
+  // Enable simple encryption for localStorage storage
+  enableEncryption?: boolean; // default: false
+  
+  // Secret key for encryption (use a random string)
+  encryptionKey?: string; // default: 'change-this-key'
+  
+  // Enable debug logging of errors
+  debug?: boolean; // default: false
+}
+```
+
+### `useTabStateSync(key: string, initialValue: any, options?: TabStateSyncOptions): [any, (v: any) => void]` *(React only)*
 Custom React hook for syncing state across tabs.
+
+
+## ❓ FAQ & Known Limitations
+
+- **Does it sync between different devices or users?**
+  - No. Sync only works between tabs/windows of the same browser and domain.
+- **Does it require a backend or cookies?**
+  - No. It is 100% client-side and does not use cookies or any backend.
+- **What happens if BroadcastChannel is not available?**
+  - It automatically falls back to using localStorage events for maximum compatibility. On Safari, due to browser limitations, the library uses a polling mechanism to detect changes, since the storage event is not reliably fired between tabs.
+- **Is it suitable for real-time multi-user collaboration?**
+  - No. It is designed for client-side, same-user scenarios (e.g., SPAs, PWAs, admin panels).
+- **Does it work in incognito/private mode?**
+  - Yes, as long as the browser supports BroadcastChannel or localStorage events in that mode. On Safari, the fallback uses polling to ensure sync even when the storage event does not fire.
+- **What about memory leaks?**
+  - Always call `destroy()` when you no longer need a TabStateSync instance (e.g., on component unmount).
+- **Is my data secure when stored in localStorage?**
+  - By default, data in localStorage is stored in plaintext. For improved security, enable the encryption option, but note that this is NOT suitable for highly sensitive data. The library uses a simple XOR encryption that helps prevent casual inspection but is not cryptographically secure.
+
+## Security Considerations
+
+- **Data Security**: The optional encryption feature provides basic protection against casual inspection of localStorage data. However, it is not a replacement for proper encryption and should not be used for highly sensitive information.
+- **XSS Protection**: Always sanitize any HTML content before rendering it to the DOM, especially if it was received through TabStateSync.
+- **Error Handling**: Enable debug mode during development to catch potential issues with data formatting or transport.
+- **Namespace Collisions**: Use the namespace option to prevent key collisions with other applications or libraries using localStorage.
+
+---
+
+## 🛡️ Browser Support
+
+* Full support: Chrome, Edge, Firefox, Safari (latest)
+* Falls back to `localStorage` for legacy browsers
+
+---
+
+## Safari/Apple limitations
+
+**Safari (desktop and iOS) does not reliably fire the `storage` event between tabs.**
+To ensure cross-tab sync, TabStateSync automatically enables a polling fallback only on Safari, checking for changes every 500ms. This ensures maximum compatibility, but may have a slight performance impact only on Safari. All other browsers use the more efficient `storage` event.
+
+---
+
+## 📄 License
+
+MIT
+
+---
+
+Contributions and suggestions are welcome!
 
 ---
 
@@ -130,70 +197,4 @@ TabStateSync is automatically tested in Chromium, Firefox, and WebKit (Safari) u
 
 ---
 
-## 🚀 Automated Semantic Versioning & Release
 
-This project uses [standard-version](https://github.com/conventional-changelog/standard-version) for automated semantic versioning and changelog generation.
-
-### How to create a new release
-
-1. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
-2. Run:
-   ```bash
-   npm run release
-   git push --follow-tags origin master
-   ```
-3. Create a GitHub release or push a tag (the CI will publish to npm and create the release automatically).
-
----
-
-## ❓ FAQ & Known Limitations
-
-- **Does it sync between different devices or users?**
-  - No. Sync only works between tabs/windows of the same browser and domain.
-- **Does it require a backend or cookies?**
-  - No. It is 100% client-side and does not use cookies or any backend.
-- **What happens if BroadcastChannel is not available?**
-  - It automatically falls back to using localStorage events for maximum compatibility. On Safari, due to browser limitations, the library uses a polling mechanism to detect changes, since the storage event is not reliably fired between tabs.
-- **Is it suitable for real-time multi-user collaboration?**
-  - No. It is designed for client-side, same-user scenarios (e.g., SPAs, PWAs, admin panels).
-- **Does it work in incognito/private mode?**
-  - Yes, as long as the browser supports BroadcastChannel or localStorage events in that mode. On Safari, the fallback uses polling to ensure sync even when the storage event does not fire.
-- **What about memory leaks?**
-  - Always call `destroy()` when you no longer need a TabStateSync instance (e.g., on component unmount).
-
----
-
-## 🛡️ Browser Support
-
-* Full support: Chrome, Edge, Firefox, Safari (latest)
-* Falls back to `localStorage` for legacy browsers
-
----
-
-## 📄 License
-
-MIT
-
----
-
-Contributions and suggestions are welcome!
-
----
-
-## Safari/Apple limitations
-
-**Safari (desktop and iOS) does not reliably fire the `storage` event between tabs.**
-To ensure cross-tab sync, TabStateSync automatically enables a polling fallback only on Safari, checking for changes every 500ms. This ensures maximum compatibility, but may have a slight performance impact only on Safari. All other browsers use the more efficient `storage` event.
-
----
-
-## 📚 Documentation & GitHub Pages
-
-Interactive documentation and advanced examples are in the `docs/` folder. To publish to GitHub Pages:
-
-1. Build or update your docs in the `docs/` folder.
-2. Commit and push to the `main` branch.
-3. In your repository settings, set GitHub Pages source to `/docs` folder on `main` branch.
-4. Access your documentation at `https://<your-username>.github.io/TabStateSync/`.
-
----

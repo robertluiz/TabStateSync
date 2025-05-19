@@ -14,3 +14,4 @@ TASKS.md
 playwright-report/*
 test-results/*
 .last-run.json
+package-lock.json

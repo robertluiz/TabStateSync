@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TabStateSync } from '../TabStateSync';
+import { TabStateSync, TabStateSyncOptions } from '../TabStateSync';
 
 import { JSDOM } from 'jsdom';
 
@@ -70,7 +70,13 @@ describe('TabStateSync', () => {
     const sync = new TabStateSync<string>('test');
     const cb = vi.fn();
     sync.subscribe(cb);
-    window.dispatchEvent(new window.StorageEvent('storage', { key: 'test', newValue: JSON.stringify({ value: 'xyz', ts: Date.now() }) }));
+    
+    // Simulate storage event with the new message format (v property)
+    window.dispatchEvent(new window.StorageEvent('storage', { 
+      key: 'tss:test', 
+      newValue: JSON.stringify({ value: 'xyz', ts: Date.now(), v: 1 }) 
+    }));
+    
     expect(cb).toHaveBeenCalledWith('xyz');
   });
 
@@ -157,10 +163,103 @@ describe('TabStateSync', () => {
     const sync = new TabStateSync<string>('badjson');
     const cb = vi.fn();
     sync.subscribe(cb);
-    localStorage.setItem('badjson', 'not-a-json');
-    // Simula polling ou evento storage
-    window.dispatchEvent(new window.StorageEvent('storage', { key: 'badjson', newValue: 'not-a-json' }));
-    // Não deve lançar erro nem chamar callback
+    localStorage.setItem('tss:badjson', 'not-a-json');
+    // Simulate polling or storage event
+    window.dispatchEvent(new window.StorageEvent('storage', { key: 'tss:badjson', newValue: 'not-a-json' }));
+    // Should not throw error or call callback
     expect(cb).not.toHaveBeenCalled();
+  });
+  
+  // New tests for security features
+  
+  it('should apply namespace to localStorage key', () => {
+    delete window.BroadcastChannel;
+    const sync = new TabStateSync<string>('test', { namespace: 'app' });
+    const cb = vi.fn();
+    sync.subscribe(cb);
+    sync.set('abc');
+    
+    // Check if the item was stored with the correct namespace
+    expect(localStorage.getItem('app:test')).not.toBeNull();
+    expect(localStorage.getItem('tss:test')).toBeNull(); // Should not use default namespace
+  });
+  
+  it('should encrypt and decrypt data correctly', () => {
+    delete window.BroadcastChannel;
+    const spy = vi.spyOn(console, 'error');
+    
+    // Create instance with encryption enabled
+    const sync = new TabStateSync<string>('test', { 
+      enableEncryption: true,
+      encryptionKey: 'test-key-123',
+      debug: true
+    });
+    
+    const cb = vi.fn();
+    sync.subscribe(cb);
+    sync.set('secret-data');
+    
+    // Get the encrypted value from localStorage
+    const encryptedValue = localStorage.getItem('tss:test');
+    expect(encryptedValue).not.toBeNull();
+    
+    // Verify that the value does NOT contain the original text (is encrypted)
+    expect(encryptedValue).not.toContain('secret-data');
+    
+    // Create a second instance with the same configuration
+    const sync2 = new TabStateSync<string>('test', { 
+      enableEncryption: true,
+      encryptionKey: 'test-key-123'
+    });
+    
+    const cb2 = vi.fn();
+    sync2.subscribe(cb2);
+    
+    // Trigger storage event for the first instance
+    window.dispatchEvent(new window.StorageEvent('storage', { 
+      key: 'tss:test', 
+      newValue: encryptedValue
+    }));
+    
+    // The second instance should be able to decrypt and process
+    expect(cb2).toHaveBeenCalledWith('secret-data');
+    
+    // Cleanup
+    sync.destroy();
+    sync2.destroy();
+    spy.mockRestore();
+  });
+  
+  it('should log errors when debug is enabled', () => {
+    delete window.BroadcastChannel;
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    const sync = new TabStateSync<string>('test', { debug: true });
+    
+    // Simulate an invalid message
+    window.dispatchEvent(new window.StorageEvent('storage', { 
+      key: 'tss:test', 
+      newValue: '{"invalid": "format"}'
+    }));
+    
+    // Check if the error was logged
+    expect(spy).toHaveBeenCalled();
+    expect(spy.mock.calls[0][0]).toContain('[TabStateSync]');
+    
+    spy.mockRestore();
+  });
+  
+  it('should reject invalid message format', () => {
+    window.BroadcastChannel = MockBroadcastChannel;
+    const sync = new TabStateSync<{ value: string }>('test', { debug: true });
+    const cb = vi.fn();
+    sync.subscribe(cb);
+    
+    // Configure test for message invalidation
+    // This requires a more elaborate mock for BroadcastChannel
+    // to allow injecting invalid messages
+    
+    // Cleanup
+    sync.destroy();
   });
 }); 

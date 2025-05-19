@@ -1,6 +1,46 @@
 type Callback<T> = (value: T) => void;
 
 /**
+ * Configuration options for TabStateSync
+ */
+export interface TabStateSyncOptions {
+  /**
+   * Namespace prefix for localStorage keys to prevent collisions
+   * @default 'tss'
+   */
+  namespace?: string;
+  
+  /**
+   * Enable simple encryption for localStorage storage
+   * Note: This is not secure for highly sensitive data
+   * @default false
+   */
+  enableEncryption?: boolean;
+  
+  /**
+   * Secret key for encryption (use a random string)
+   * Only used if enableEncryption is true
+   * @default 'change-this-key'
+   */
+  encryptionKey?: string;
+  
+  /**
+   * Enable debug logging of errors
+   * @default false
+   */
+  debug?: boolean;
+}
+
+/**
+ * Simple data validator for cross-tab messages
+ */
+interface SyncMessage<T> {
+  value: T;
+  ts: number;
+  v: number; // Schema version
+}
+
+/**
  * TabStateSync synchronizes state across browser tabs using BroadcastChannel or localStorage.
  * On Safari, a polling fallback is used for localStorage due to unreliable storage events.
  */
@@ -14,6 +54,8 @@ export class TabStateSync<T = any> {
   private destroyed = false;
   private pollingInterval: number | null = null;
   private lastPolledValue: string | null = null;
+  private options: Required<TabStateSyncOptions>;
+  private static readonly SCHEMA_VERSION = 1;
 
   private isSafari(): boolean {
     // Basic Safari detection (desktop and iOS)
@@ -24,13 +66,35 @@ export class TabStateSync<T = any> {
     );
   }
 
-  constructor(key: string) {
-    this.key = key;
+  /**
+   * Creates a new instance of TabStateSync
+   * @param key Unique key/channel for the sync
+   * @param options Configuration options
+   */
+  constructor(key: string, options: TabStateSyncOptions = {}) {
+    // Set default options
+    this.options = {
+      namespace: options.namespace ?? 'tss',
+      enableEncryption: options.enableEncryption ?? false,
+      encryptionKey: options.encryptionKey ?? 'change-this-key',
+      debug: options.debug ?? false
+    };
+
+    // Apply namespace to key for localStorage
+    this.key = `${this.options.namespace}:${key}`;
+    
     this.isBroadcastChannel = typeof window !== 'undefined' && 'BroadcastChannel' in window;
     if (this.isBroadcastChannel) {
+      // BroadcastChannel doesn't need namespace prefix
       this.channel = new BroadcastChannel(key);
       this.channel.onmessage = (event) => {
         if (this.isSetting) return;
+        
+        if (!this.isValidMessage(event.data)) {
+          this.logError('Invalid message format received:', event.data);
+          return;
+        }
+        
         this.notify(event.data);
       };
     } else if (this.isSafari()) {
@@ -41,9 +105,21 @@ export class TabStateSync<T = any> {
         if (raw && raw !== this.lastPolledValue) {
           this.lastPolledValue = raw;
           try {
-            const { value } = JSON.parse(raw);
-            this.notify(value);
-          } catch {}
+            const decryptedData = this.options.enableEncryption 
+              ? this.decrypt(raw) 
+              : raw;
+              
+            const parsed = JSON.parse(decryptedData);
+            
+            if (!this.isValidSyncMessage(parsed)) {
+              this.logError('Invalid data format in localStorage:', parsed);
+              return;
+            }
+            
+            this.notify(parsed.value);
+          } catch (err) {
+            this.logError('Error parsing localStorage data:', err);
+          }
         }
       }, 500);
     } else {
@@ -78,15 +154,29 @@ export class TabStateSync<T = any> {
     if (this.destroyed) return;
     this.lastValue = value;
     this.isSetting = true;
+    
+    const message: SyncMessage<T> = {
+      value,
+      ts: Date.now(),
+      v: TabStateSync.SCHEMA_VERSION
+    };
+    
     if (this.isBroadcastChannel && this.channel) {
       this.channel.postMessage(value);
     } else {
-      localStorage.setItem(this.key, JSON.stringify({ value, ts: Date.now() }));
+      const serialized = JSON.stringify(message);
+      const dataToStore = this.options.enableEncryption 
+        ? this.encrypt(serialized) 
+        : serialized;
+        
+      localStorage.setItem(this.key, dataToStore);
+      
       // For Safari polling, update lastPolledValue immediately
       if (this.isSafari()) {
-        this.lastPolledValue = localStorage.getItem(this.key);
+        this.lastPolledValue = dataToStore;
       }
     }
+    
     this.notify(value);
     setTimeout(() => { this.isSetting = false; }, 0);
   }
@@ -99,11 +189,101 @@ export class TabStateSync<T = any> {
   private onStorage = (e: StorageEvent) => {
     if (e.key !== this.key || !e.newValue) return;
     try {
-      const { value } = JSON.parse(e.newValue);
-      localStorage.removeItem(this.key);
-      this.notify(value);
-    } catch {}
+      const decryptedData = this.options.enableEncryption 
+        ? this.decrypt(e.newValue) 
+        : e.newValue;
+        
+      const parsed = JSON.parse(decryptedData);
+      
+      if (!this.isValidSyncMessage(parsed)) {
+        this.logError('Invalid data format in storage event:', parsed);
+        return;
+      }
+      
+      this.notify(parsed.value);
+    } catch (err) {
+      this.logError('Error handling storage event:', err);
+    }
   };
+
+  /**
+   * Validates if the message has the expected format
+   */
+  private isValidMessage(data: unknown): data is T {
+    // Add your custom validation logic for BroadcastChannel messages
+    // This is a basic validation that can be enhanced
+    return data !== null && data !== undefined;
+  }
+
+  /**
+   * Validates if a parsed object matches the SyncMessage format
+   */
+  private isValidSyncMessage(data: unknown): data is SyncMessage<T> {
+    if (!data || typeof data !== 'object') return false;
+    
+    const msg = data as Partial<SyncMessage<T>>;
+    return (
+      'value' in msg && 
+      'ts' in msg &&
+      typeof msg.ts === 'number' &&
+      'v' in msg &&
+      typeof msg.v === 'number'
+    );
+  }
+
+  /**
+   * Very simple encryption for localStorage
+   * Note: This is NOT secure for highly sensitive data!
+   */
+  private encrypt(text: string): string {
+    if (!this.options.enableEncryption) return text;
+    
+    // Simple XOR encryption with the key
+    const key = this.options.encryptionKey;
+    let result = '';
+    
+    for (let i = 0; i < text.length; i++) {
+      const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+      result += String.fromCharCode(charCode);
+    }
+    
+    // Return base64 encoded string
+    return btoa(result);
+  }
+
+  /**
+   * Decrypt data from localStorage
+   */
+  private decrypt(text: string): string {
+    if (!this.options.enableEncryption) return text;
+    
+    try {
+      // Decode base64
+      const decoded = atob(text);
+      const key = this.options.encryptionKey;
+      let result = '';
+      
+      // Simple XOR decryption
+      for (let i = 0; i < decoded.length; i++) {
+        const charCode = decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        result += String.fromCharCode(charCode);
+      }
+      
+      return result;
+    } catch (err) {
+      this.logError('Decryption error:', err);
+      return text; // Fallback to original text on error
+    }
+  }
+
+  /**
+   * Log errors if debug mode is enabled
+   */
+  private logError(message: string, data?: unknown): void {
+    if (this.options.debug) {
+      console.error(`[TabStateSync] ${message}`, data);
+    }
+  }
 
   /**
    * Cleans up listeners and disables the instance.

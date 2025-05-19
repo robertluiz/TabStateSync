@@ -1005,16 +1005,13 @@ var TabStateSync = class {
     } else if (this.isSafari()) {
       this.lastPolledValue = localStorage.getItem(this.key);
       this.pollingInterval = window.setInterval(() => {
-        const current = localStorage.getItem(this.key);
-        if (current !== this.lastPolledValue) {
-          this.lastPolledValue = current;
-          if (current) {
-            try {
-              const { value } = JSON.parse(current);
-              localStorage.removeItem(this.key);
-              this.notify(value);
-            } catch {
-            }
+        const raw = localStorage.getItem(this.key);
+        if (raw && raw !== this.lastPolledValue) {
+          this.lastPolledValue = raw;
+          try {
+            const { value } = JSON.parse(raw);
+            this.notify(value);
+          } catch {
           }
         }
       }, 500);
@@ -1025,12 +1022,26 @@ var TabStateSync = class {
   isSafari() {
     return typeof navigator !== "undefined" && /safari/i.test(navigator.userAgent) && !/chrome|android/i.test(navigator.userAgent);
   }
+  /**
+   * Registers a callback to be called when the value changes in another tab.
+   * @param callback Function to call with the new value.
+   */
   subscribe(callback) {
     this.callbacks.add(callback);
   }
+  /**
+   * Removes a previously registered callback.
+   * @param callback The callback to remove.
+   */
   unsubscribe(callback) {
     this.callbacks.delete(callback);
   }
+  /**
+   * Sets a new value and notifies other tabs.
+   * Uses BroadcastChannel if available, otherwise falls back to localStorage.
+   * On Safari, triggers polling fallback for cross-tab sync.
+   * @param value The new value to set and broadcast.
+   */
   set(value) {
     if (this.destroyed) return;
     this.lastValue = value;
@@ -1052,6 +1063,10 @@ var TabStateSync = class {
     this.lastValue = value;
     this.callbacks.forEach((cb) => cb(value));
   }
+  /**
+   * Cleans up listeners and disables the instance.
+   * Removes BroadcastChannel, storage event, or polling interval as needed.
+   */
   destroy() {
     if (this.isBroadcastChannel && this.channel) {
       this.channel.close();

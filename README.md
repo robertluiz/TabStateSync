@@ -1,5 +1,6 @@
 # 🧩 TabStateSync
 
+[![npm version](https://img.shields.io/npm/v/tabstatesync.svg)](https://www.npmjs.com/package/tabstatesync)
 ![CI](https://github.com/robertluiz/TabStateSync/actions/workflows/ci.yml/badge.svg)
 ![Tests](https://github.com/robertluiz/TabStateSync/actions/workflows/ci.yml/badge.svg?label=tests)
 
@@ -29,6 +30,8 @@ npm install tabstatesync
 
 ### Basic Example (Vanilla JS/TS)
 
+Veja também exemplos completos em [`examples/VanillaThemeExample.ts`](examples/VanillaThemeExample.ts) e [`examples/e2e-sync.html`](examples/e2e-sync.html).
+
 ```ts
 import { createTabStateSync } from 'tabstatesync';
 
@@ -47,6 +50,8 @@ tabSync.set('dark');
 ---
 
 ### React Hook Example
+
+Veja também exemplo completo em [`examples/ReactThemeExample.tsx`](examples/ReactThemeExample.tsx).
 
 ```tsx
 import { useTabStateSync } from 'tabstatesync';
@@ -97,25 +102,31 @@ Custom React hook for syncing state across tabs.
 
 ## 🧪 E2E Cross-Browser Testing
 
-TabStateSync is tested automatically in Chromium, Firefox and WebKit (Safari) using Playwright.
+TabStateSync is automatically tested in Chromium, Firefox, and WebKit (Safari) using Playwright. This ensures robust cross-browser compatibility, including fallback and edge cases.
 
-### How to run E2E tests
+### How to run E2E tests locally
 
-1. Build the JS bundle for browser tests:
+1. **Build the JS bundle for browser tests:**
    ```bash
-   npx esbuild src/index.ts --bundle --format=esm --outfile=examples/tabstatesync.bundle.js
+   npm run build:bundle
    ```
-2. Start a local server:
+2. **Start a local server:**
    ```bash
-   npx http-server -p 8080 -c-1 .
+   npm run serve:e2e
    ```
-3. In another terminal, run Playwright tests:
+3. **In another terminal, run Playwright tests:**
    ```bash
-   npx playwright test
+   npm run test:e2e
    ```
 
-### Fallback/localStorage test
-To test the fallback, temporarily comment out or remove `window.BroadcastChannel` in your browser's devtools or in the bundle, then rerun the E2E test. The library will use localStorage events for sync.
+- The tests will open browsers automatically and check sync between tabs, fallback to localStorage, and edge cases.
+- To test the fallback, temporarily comment out or remove `window.BroadcastChannel` in your browser's devtools or in the bundle, then rerun the E2E test. The library will use localStorage events for sync.
+
+#### Available npm scripts for E2E and build
+
+- `npm run build:bundle` — Build browser bundle for E2E/examples
+- `npm run serve:e2e` — Serve local files for browser tests
+- `npm run test:e2e` — Run Playwright E2E tests
 
 ---
 
@@ -173,3 +184,16 @@ Contributions and suggestions are welcome!
 
 **Safari (desktop and iOS) does not reliably fire the `storage` event between tabs.**
 To ensure cross-tab sync, TabStateSync automatically enables a polling fallback only on Safari, checking for changes every 500ms. This ensures maximum compatibility, but may have a slight performance impact only on Safari. All other browsers use the more efficient `storage` event.
+
+---
+
+## 📚 Documentation & GitHub Pages
+
+Interactive documentation and advanced examples are in the `docs/` folder. To publish to GitHub Pages:
+
+1. Build or update your docs in the `docs/` folder.
+2. Commit and push to the `main` branch.
+3. In your repository settings, set GitHub Pages source to `/docs` folder on `main` branch.
+4. Access your documentation at `https://<your-username>.github.io/TabStateSync/`.
+
+---

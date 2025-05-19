@@ -35,21 +35,17 @@ export class TabStateSync<T = any> {
       };
     } else if (this.isSafari()) {
       // Safari fallback: use polling because storage event is unreliable
-      this.lastPolledValue = localStorage.getItem(this.key);
+      this.lastPolledValue = localStorage.getItem(this.key); // Initialize with current value
       this.pollingInterval = window.setInterval(() => {
-        const current = localStorage.getItem(this.key);
-        if (current !== this.lastPolledValue) {
-          this.lastPolledValue = current;
-          if (current) {
-            try {
-              const { value } = JSON.parse(current);
-              // Remove the key after processing to ensure Safari/WebKit compatibility
-              localStorage.removeItem(this.key);
-              this.notify(value);
-            } catch {}
-          }
+        const raw = localStorage.getItem(this.key);
+        if (raw && raw !== this.lastPolledValue) {
+          this.lastPolledValue = raw;
+          try {
+            const { value } = JSON.parse(raw);
+            this.notify(value);
+          } catch {}
         }
-      }, 500); // 500ms polling interval
+      }, 500);
     } else {
       // All other browsers: use storage event
       window.addEventListener('storage', this.onStorage);

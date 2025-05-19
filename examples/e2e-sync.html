@@ -6,6 +6,8 @@
   <script type="module">
     import { createTabStateSync } from './tabstatesync.bundle.js';
     window.tabSync = createTabStateSync('e2e');
+    // Expose createTabStateSync globally for E2E tests (multiple channels)
+    window.createTabStateSync = createTabStateSync;
   </script>
 </head>
 <body>

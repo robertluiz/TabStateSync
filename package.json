@@ -1,6 +1,6 @@
 {
   "name": "tabstatesync",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Lightweight library for synchronizing state across browser tabs using BroadcastChannel or localStorage fallback.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

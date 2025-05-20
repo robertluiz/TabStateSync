@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { TabStateSync, TabStateSyncOptions } from './TabStateSync';
 
 /**
@@ -15,9 +15,15 @@ export function useTabStateSync<T = any>(
 ): [T, (v: T) => void] {
   const [state, setState] = useState<T>(initialValue);
   const syncRef = useRef<TabStateSync<T> | null>(null);
+  const optionsRef = useRef<TabStateSyncOptions | undefined>(options);
+  
+  // Update options ref when options change
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   useEffect(() => {
-    syncRef.current = new TabStateSync<T>(key, options);
+    syncRef.current = new TabStateSync<T>(key, optionsRef.current);
     const handleChange = (value: T) => setState(value);
     syncRef.current.subscribe(handleChange);
     return () => {
@@ -26,12 +32,13 @@ export function useTabStateSync<T = any>(
         syncRef.current.destroy();
       }
     };
-  }, [key, options]);
+  }, [key]); // Remove options from dependencies
 
-  const set = (value: T) => {
+  // Memoize the set function to prevent unnecessary re-renders
+  const set = useCallback((value: T) => {
     setState(value);
     syncRef.current?.set(value);
-  };
+  }, []);
 
   return [state, set];
 } 

@@ -1177,8 +1177,12 @@ var import_react = __toESM(require_react());
 function useTabStateSync(key, initialValue, options) {
   const [state, setState] = (0, import_react.useState)(initialValue);
   const syncRef = (0, import_react.useRef)(null);
+  const optionsRef = (0, import_react.useRef)(options);
   (0, import_react.useEffect)(() => {
-    syncRef.current = new TabStateSync(key, options);
+    optionsRef.current = options;
+  }, [options]);
+  (0, import_react.useEffect)(() => {
+    syncRef.current = new TabStateSync(key, optionsRef.current);
     const handleChange = (value) => setState(value);
     syncRef.current.subscribe(handleChange);
     return () => {
@@ -1187,11 +1191,11 @@ function useTabStateSync(key, initialValue, options) {
         syncRef.current.destroy();
       }
     };
-  }, [key, options]);
-  const set = (value) => {
+  }, [key]);
+  const set = (0, import_react.useCallback)((value) => {
     setState(value);
     syncRef.current?.set(value);
-  };
+  }, []);
   return [state, set];
 }
 
